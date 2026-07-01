@@ -119,6 +119,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6',
             'role' => 'required|string',
             'stage_id' => 'nullable|integer|exists:educational_stages,id',
             'grade_id' => 'nullable|integer|exists:grades,id',
@@ -130,7 +131,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'is_active' => $request->boolean('is_active', true),
-            'password' => Hash::make('password123'),
+            'password' => Hash::make($request->password),
             'stage_id' => $request->stage_id,
             'grade_id' => $request->grade_id,
             'subscription_expiry' => $request->subscription_expiry,
