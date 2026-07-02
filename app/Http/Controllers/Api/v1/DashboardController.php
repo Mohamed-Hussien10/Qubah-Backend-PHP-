@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\v1;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Lesson;
-use App\Models\Subscription;
 use Illuminate\Http\JsonResponse;
 use OpenApi\Attributes as OA;
 
@@ -37,16 +36,14 @@ class DashboardController extends Controller
     public function getStats(): JsonResponse
     {
         $totalUsers = User::count();
-        $activeSubscriptions = Subscription::where('status', 'active')->count();
         $totalLessons = Lesson::count();
-        $totalRevenue = Subscription::sum('amount');
 
         return response()->json([
             'data' => [
                 'totalUsers' => $totalUsers,
-                'activeSubscriptions' => $activeSubscriptions,
+                'activeSubscriptions' => 0,
                 'totalLessons' => $totalLessons,
-                'totalRevenue' => (float) $totalRevenue,
+                'totalRevenue' => 0.0,
                 'userGrowthPercent' => 12.5,
                 'revenueGrowthPercent' => 8.2,
             ]

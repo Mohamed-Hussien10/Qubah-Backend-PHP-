@@ -9,9 +9,7 @@ use App\Http\Controllers\Api\v1\SubjectController;
 use App\Http\Controllers\Api\v1\UnitController;
 use App\Http\Controllers\Api\v1\LessonController;
 use App\Http\Controllers\Api\v1\LessonFileController;
-use App\Http\Controllers\Api\v1\ProgressController;
 use App\Http\Controllers\Api\v1\UserController;
-use App\Http\Controllers\Api\v1\SubscriptionController;
 use App\Http\Controllers\Api\v1\SettingsController;
 use App\Http\Controllers\Api\v1\DashboardController;
 use App\Http\Middleware\CheckRole;
@@ -43,6 +41,22 @@ Route::prefix('v1')->group(function () {
         ]);
     })->where('path', '.*');
 
+    // Public Proxy for Files (PDFs, etc) to bypass CORS
+    Route::get('/files/{path}', function ($path) {
+        $fullPath = storage_path('app/public/' . $path);
+        if (!file_exists($fullPath)) {
+            abort(404);
+        }
+        $mime = \Illuminate\Support\Facades\File::mimeType($fullPath);
+        return response()->file($fullPath, [
+            'Content-Type' => $mime,
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+            'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization, X-Request-With',
+            'Access-Control-Expose-Headers' => 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range',
+        ]);
+    })->where('path', '.*');
+
     // Public Hierarchical Content Navigation
     Route::get('/educational-stages', [EducationalStageController::class, 'index']);
     Route::get('/educational-stages/{id}', [EducationalStageController::class, 'show']);
@@ -59,10 +73,6 @@ Route::prefix('v1')->group(function () {
         // Thumbnail Uploads & Retrieval (with CORS)
         Route::post('/thumbnails/upload', [ThumbnailController::class, 'upload']);
         Route::delete('/thumbnails', [ThumbnailController::class, 'delete']);
-
-        // Progress Tracking
-        Route::post('/progress/{fileId}', [ProgressController::class, 'update']);
-        Route::get('/progress/summary', [ProgressController::class, 'summary']);
 
         // Admin Content & Management (Requires Admin Role)
         Route::middleware(CheckRole::class.':admin')->group(function () {
@@ -104,19 +114,6 @@ Route::prefix('v1')->group(function () {
             Route::put('/users/{id}', [UserController::class, 'update']);
             Route::delete('/users/{id}', [UserController::class, 'destroy']);
             Route::post('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
-            Route::post('/users/{id}/assign-subscription', [UserController::class, 'assignSubscription']);
-
-            // Plan & Subscription Management
-            Route::get('/subscriptions/plans', [SubscriptionController::class, 'getAllPlans']);
-            Route::post('/subscriptions/plans', [SubscriptionController::class, 'createPlan']);
-            Route::put('/subscriptions/plans/{id}', [SubscriptionController::class, 'updatePlan']);
-            Route::delete('/subscriptions/plans/{id}', [SubscriptionController::class, 'deletePlan']);
-
-            Route::get('/subscriptions', [SubscriptionController::class, 'getAllSubscriptions']);
-            Route::post('/subscriptions', [SubscriptionController::class, 'assignSubscription']);
-            Route::put('/subscriptions/{id}', [SubscriptionController::class, 'updateSubscription']);
-            Route::post('/subscriptions/{id}/cancel', [SubscriptionController::class, 'cancelSubscription']);
-            Route::delete('/subscriptions/{id}', [SubscriptionController::class, 'deleteSubscription']);
 
             // Settings Management
             Route::get('/settings', [SettingsController::class, 'getSettings']);

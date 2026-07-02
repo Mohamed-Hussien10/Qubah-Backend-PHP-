@@ -27,7 +27,6 @@ class User extends Authenticatable
         'password',
         'role',
         'is_active',
-        'subscription_status',
         'last_login',
         'stage_id',
         'grade_id',
@@ -57,7 +56,7 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'is_active' => 'boolean',
             'last_login' => 'datetime',
-            'subscription_expiry' => 'datetime',
+            'subscription_expiry' => 'date',
         ];
     }
 
@@ -79,14 +78,6 @@ class User extends Authenticatable
     }
 
     // ── Relationships ─────────────────────────────────────────────────────
-
-    /**
-     * Progress records for this user.
-     */
-    public function progress(): HasMany
-    {
-        return $this->hasMany(UserProgress::class);
-    }
 
     /**
      * Children linked to this parent.

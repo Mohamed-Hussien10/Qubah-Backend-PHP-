@@ -189,7 +189,7 @@ class UserController extends Controller
             'subscription_expiry' => 'nullable|date',
         ]);
 
-        $user->update($request->only(['name', 'email', 'role', 'is_active', 'subscription_status', 'stage_id', 'grade_id', 'subscription_expiry']));
+        $user->update($request->only(['name', 'email', 'role', 'is_active', 'stage_id', 'grade_id', 'subscription_expiry']));
 
         return response()->json([
             'message' => 'User updated successfully',
@@ -254,48 +254,6 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'User status updated',
-            'data' => new UserResource($user)
-        ]);
-    }
-
-    /**
-     * Assign subscription status to a user.
-     */
-    #[OA\Post(
-        path: '/api/v1/users/{id}/assign-subscription',
-        operationId: 'assignUserSubscription',
-        summary: 'Assign subscription status to a user',
-        tags: ['User Management'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['subscription_status'],
-                properties: [
-                    new OA\Property(property: 'subscription_status', type: 'string', example: 'active')
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Subscription assigned successfully', content: new OA\JsonContent(properties: [
-                new OA\Property(property: 'message', type: 'string', example: 'Subscription status assigned'),
-                new OA\Property(property: 'data', ref: '#/components/schemas/UserResource')
-            ])),
-            new OA\Response(response: 401, description: 'Unauthenticated'),
-            new OA\Response(response: 404, description: 'User not found')
-        ]
-    )]
-    public function assignSubscription(Request $request, $id): JsonResponse
-    {
-        $user = User::findOrFail($id);
-        $user->subscription_status = $request->input('subscription_status', 'none');
-        $user->save();
-
-        return response()->json([
-            'message' => 'Subscription status assigned',
             'data' => new UserResource($user)
         ]);
     }
