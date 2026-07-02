@@ -118,4 +118,35 @@ class SettingsController extends Controller
 
         return $this->getSettings();
     }
+
+    /**
+     * Get public app settings (e.g., config and maintenance mode).
+     */
+    #[OA\Get(
+        path: '/api/v1/settings/config',
+        operationId: 'getPublicSettings',
+        summary: 'Get public application config',
+        tags: ['Settings'],
+        responses: [
+            new OA\Response(response: 200, description: 'Successful operation', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', type: 'object', properties: [
+                    new OA\Property(property: 'appName', type: 'string'),
+                    new OA\Property(property: 'maintenanceMode', type: 'boolean'),
+                    new OA\Property(property: 'contactEmail', type: 'string'),
+                    new OA\Property(property: 'contactPhone', type: 'string'),
+                ])
+            ]))
+        ]
+    )]
+    public function getPublicSettings(): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'appName' => Setting::getValue('app_name', 'قبة المعرفة'),
+                'maintenanceMode' => (bool) Setting::getValue('maintenance_mode', false),
+                'contactEmail' => Setting::getValue('contact_email', 'support@qubah.com'),
+                'contactPhone' => Setting::getValue('contact_phone', '+966500000000'),
+            ]
+        ]);
+    }
 }

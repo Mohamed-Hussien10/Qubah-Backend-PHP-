@@ -218,4 +218,100 @@ class AuthController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Update user profile.
+     */
+    #[OA\Post(
+        path: '/api/v1/user/profile/update',
+        operationId: 'updateProfile',
+        summary: 'Update user profile',
+        tags: ['Authentication'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'email', type: 'string'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Profile updated'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $user->id,
+        ]);
+
+        if ($request->has('name')) {
+            $user->name = $request->name;
+        }
+
+        if ($request->has('email')) {
+            $user->email = $request->email;
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'data' => new UserResource($user)
+        ]);
+    }
+
+    /**
+     * Change user password.
+     */
+    #[OA\Post(
+        path: '/api/v1/user/change-password',
+        operationId: 'changePassword',
+        summary: 'Change user password',
+        tags: ['Authentication'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['current_password', 'new_password'],
+                properties: [
+                    new OA\Property(property: 'current_password', type: 'string'),
+                    new OA\Property(property: 'new_password', type: 'string', minLength: 8),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Password changed successfully'),
+            new OA\Response(response: 400, description: 'Incorrect current password'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:8',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'The provided password does not match your current password.'
+            ], 400);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'message' => 'Password changed successfully'
+        ]);
+    }
 }

@@ -28,6 +28,12 @@ Route::prefix('v1')->group(function () {
         });
     });
 
+    // User Routes (auth:sanctum)
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/user/profile/update', [AuthController::class, 'updateProfile']);
+        Route::post('/user/change-password', [AuthController::class, 'changePassword']);
+    });
+
     // Public Proxy for Thumbnails to bypass CORS and Authentication for NetworkImage
     Route::get('/thumbnails/{path}', function ($path) {
         $fullPath = storage_path('app/public/thumbnails/' . $path);
@@ -56,6 +62,9 @@ Route::prefix('v1')->group(function () {
             'Access-Control-Expose-Headers' => 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range',
         ]);
     })->where('path', '.*');
+
+    // Public Settings Config
+    Route::get('/settings/config', [SettingsController::class, 'getPublicSettings']);
 
     // Public Hierarchical Content Navigation
     Route::get('/educational-stages', [EducationalStageController::class, 'index']);
