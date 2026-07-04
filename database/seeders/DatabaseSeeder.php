@@ -2,14 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Plan;
-use App\Models\Subscription;
-use App\Models\Notification;
 use App\Models\Setting;
-use App\Enums\ProgressStatus;
 use App\Enums\UserRole;
 use App\Models\User;
-use App\Models\UserProgress;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -114,6 +109,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 4. Create some progress for the student
+        /*
         UserProgress::create([
             'user_id' => $student->id,
             'lesson_file_id' => $fileVideo->id,
@@ -127,6 +123,7 @@ class DatabaseSeeder extends Seeder
             'status' => ProgressStatus::Started->value,
             'time_spent' => 120,
         ]);
+        */
 
         // 5. Seed Settings
         Setting::setValue('app_name', 'قبة المعرفة');
@@ -141,6 +138,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 6. Seed Plans
+        /*
         $planMonthly = Plan::create([
             'name' => 'الباقة الشهرية',
             'price' => 50.00,
@@ -185,5 +183,6 @@ class DatabaseSeeder extends Seeder
             'status' => 'sent',
             'sent_at' => now(),
         ]);
+        */
     }
 }
