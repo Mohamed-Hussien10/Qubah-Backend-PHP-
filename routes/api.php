@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\v1\LessonFileController;
 use App\Http\Controllers\Api\v1\UserController;
 use App\Http\Controllers\Api\v1\SettingsController;
 use App\Http\Controllers\Api\v1\DashboardController;
+use App\Http\Controllers\Api\v1\FreeTrialController;
 use App\Http\Middleware\CheckRole;
 use Illuminate\Support\Facades\Route;
 
@@ -76,6 +77,14 @@ Route::prefix('v1')->group(function () {
     Route::get('/lessons/{id}', [LessonController::class, 'show']);
     Route::get('/lesson-files/{id}', [LessonFileController::class, 'show']);
 
+    // Public Free Trial Navigation
+    Route::get('/free-trial/stages', [FreeTrialController::class, 'getStages']);
+    Route::get('/free-trial/stages/{id}/grades', [FreeTrialController::class, 'getGradesByStage']);
+    Route::get('/free-trial/grades/{id}/subjects', [FreeTrialController::class, 'getSubjectsByGrade']);
+    Route::get('/free-trial/subjects/{id}', [FreeTrialController::class, 'showSubject']);
+    Route::get('/free-trial/subjects/{id}/lesson-files', [FreeTrialController::class, 'getLessonFilesBySubject']);
+    Route::get('/free-trial/lesson-files/{id}', [FreeTrialController::class, 'showLessonFile']);
+
     // Protected Routes
     Route::middleware('auth:sanctum')->group(function () {
         
@@ -115,6 +124,21 @@ Route::prefix('v1')->group(function () {
             Route::post('/lesson-files', [LessonFileController::class, 'store']);
             Route::put('/lesson-files/{id}', [LessonFileController::class, 'update']);
             Route::delete('/lesson-files/{id}', [LessonFileController::class, 'destroy']);
+
+            // Free Trial Management
+            Route::post('/free-trial/stages', [FreeTrialController::class, 'storeStage']);
+            Route::put('/free-trial/stages/{id}', [FreeTrialController::class, 'updateStage']);
+            Route::delete('/free-trial/stages/{id}', [FreeTrialController::class, 'destroyStage']);
+            Route::post('/free-trial/grades', [FreeTrialController::class, 'storeGrade']);
+            Route::put('/free-trial/grades/{id}', [FreeTrialController::class, 'updateGrade']);
+            Route::delete('/free-trial/grades/{id}', [FreeTrialController::class, 'destroyGrade']);
+            Route::post('/free-trial/subjects', [FreeTrialController::class, 'storeSubject']);
+            Route::put('/free-trial/subjects/{id}', [FreeTrialController::class, 'updateSubject']);
+            Route::delete('/free-trial/subjects/{id}', [FreeTrialController::class, 'destroySubject']);
+            Route::post('/free-trial/lesson-files/upload', [FreeTrialController::class, 'uploadLessonFile']);
+            Route::post('/free-trial/lesson-files', [FreeTrialController::class, 'storeLessonFile']);
+            Route::put('/free-trial/lesson-files/{id}', [FreeTrialController::class, 'updateLessonFile']);
+            Route::delete('/free-trial/lesson-files/{id}', [FreeTrialController::class, 'destroyLessonFile']);
 
             // User Management
             Route::get('/users', [UserController::class, 'index']);

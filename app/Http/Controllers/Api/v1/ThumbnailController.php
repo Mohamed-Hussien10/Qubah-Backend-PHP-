@@ -14,7 +14,7 @@ class ThumbnailController extends Controller
     {
         $request->validate([
             'thumbnail' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'folder' => 'nullable|string|in:stages,grades,sections,subjects,units,lessons,files'
+            'folder' => 'nullable|string|in:stages,grades,sections,subjects,units,lessons,files,free-trial/stages,free-trial/grades,free_trial_subjects'
         ]);
 
         if ($request->hasFile('thumbnail')) {
