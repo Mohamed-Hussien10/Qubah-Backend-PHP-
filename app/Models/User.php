@@ -30,6 +30,7 @@ class User extends Authenticatable
         'last_login',
         'stage_id',
         'grade_id',
+        'package_id',
         'subscription_expiry',
     ];
 
@@ -105,5 +106,10 @@ class User extends Authenticatable
     public function grade(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Grade::class, 'grade_id');
+    }
+
+    public function package(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Package::class, 'package_id');
     }
 }

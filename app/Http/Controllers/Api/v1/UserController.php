@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Package;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class UserController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = User::query();
+        $query = User::with(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject']);
 
         if ($request->has('search')) {
             $search = $request->query('search');
@@ -78,7 +79,7 @@ class UserController extends Controller
     )]
     public function show($id): JsonResponse
     {
-        $user = User::findOrFail($id);
+        $user = User::with(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject'])->findOrFail($id);
         return response()->json([
             'data' => new UserResource($user)
         ]);
@@ -121,10 +122,27 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
             'role' => 'required|string',
+            'package_id' => 'nullable|integer|exists:packages,id',
             'stage_id' => 'nullable|integer|exists:educational_stages,id',
             'grade_id' => 'nullable|integer|exists:grades,id',
             'subscription_expiry' => 'nullable|date',
         ]);
+
+        $packageId = $request->package_id;
+        $stageId = $request->stage_id;
+        $gradeId = $request->grade_id;
+        $subscriptionExpiry = $request->subscription_expiry;
+
+        if ($packageId) {
+            $package = Package::find($packageId);
+            if ($package) {
+                $stageId = $package->educational_stage_id;
+                $gradeId = $package->grade_id;
+                if (!$subscriptionExpiry) {
+                    $subscriptionExpiry = $package->expiry_date;
+                }
+            }
+        }
 
         $user = User::create([
             'name' => $request->name,
@@ -132,10 +150,13 @@ class UserController extends Controller
             'role' => $request->role,
             'is_active' => $request->boolean('is_active', true),
             'password' => Hash::make($request->password),
-            'stage_id' => $request->stage_id,
-            'grade_id' => $request->grade_id,
-            'subscription_expiry' => $request->subscription_expiry,
+            'package_id' => $packageId,
+            'stage_id' => $stageId,
+            'grade_id' => $gradeId,
+            'subscription_expiry' => $subscriptionExpiry,
         ]);
+
+        $user->load(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject']);
 
         return response()->json([
             'message' => 'User created successfully',
@@ -184,12 +205,32 @@ class UserController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $id,
             'role' => 'sometimes|required|string',
+            'package_id' => 'nullable|integer|exists:packages,id',
             'stage_id' => 'nullable|integer|exists:educational_stages,id',
             'grade_id' => 'nullable|integer|exists:grades,id',
             'subscription_expiry' => 'nullable|date',
         ]);
 
-        $user->update($request->only(['name', 'email', 'role', 'is_active', 'stage_id', 'grade_id', 'subscription_expiry']));
+        $updateData = $request->only(['name', 'email', 'role', 'is_active', 'package_id', 'stage_id', 'grade_id', 'subscription_expiry']);
+
+        if ($request->has('package_id')) {
+            $packageId = $request->package_id;
+            if ($packageId) {
+                $package = Package::find($packageId);
+                if ($package) {
+                    $updateData['stage_id'] = $package->educational_stage_id;
+                    $updateData['grade_id'] = $package->grade_id;
+                    if (!$request->has('subscription_expiry') || !$request->subscription_expiry) {
+                        $updateData['subscription_expiry'] = $package->expiry_date;
+                    }
+                }
+            } else {
+                $updateData['package_id'] = null;
+            }
+        }
+
+        $user->update($updateData);
+        $user->load(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject']);
 
         return response()->json([
             'message' => 'User updated successfully',

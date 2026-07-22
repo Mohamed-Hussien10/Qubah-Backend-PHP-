@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\v1\UserController;
 use App\Http\Controllers\Api\v1\SettingsController;
 use App\Http\Controllers\Api\v1\DashboardController;
 use App\Http\Controllers\Api\v1\FreeTrialController;
+use App\Http\Controllers\Api\v1\PackageController;
 use App\Http\Middleware\CheckRole;
 use Illuminate\Support\Facades\Route;
 
@@ -77,6 +78,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/lessons/{id}', [LessonController::class, 'show']);
     Route::get('/lesson-files/{id}', [LessonFileController::class, 'show']);
 
+    // Packages
+    Route::get('/packages', [PackageController::class, 'index']);
+    Route::get('/packages/{id}', [PackageController::class, 'show']);
+
     // Public Free Trial Navigation
     Route::get('/free-trial/stages', [FreeTrialController::class, 'getStages']);
     Route::get('/free-trial/stages/{id}/grades', [FreeTrialController::class, 'getGradesByStage']);
@@ -124,6 +129,11 @@ Route::prefix('v1')->group(function () {
             Route::post('/lesson-files', [LessonFileController::class, 'store']);
             Route::put('/lesson-files/{id}', [LessonFileController::class, 'update']);
             Route::delete('/lesson-files/{id}', [LessonFileController::class, 'destroy']);
+
+            // Packages Management
+            Route::post('/packages', [PackageController::class, 'store']);
+            Route::put('/packages/{id}', [PackageController::class, 'update']);
+            Route::delete('/packages/{id}', [PackageController::class, 'destroy']);
 
             // Free Trial Management
             Route::post('/free-trial/stages', [FreeTrialController::class, 'storeStage']);
