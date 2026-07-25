@@ -109,7 +109,7 @@ class LessonFileController extends Controller
     public function upload(Request $request)
     {
         $request->validate([
-            'file' => 'required|file',
+            'file' => 'required|file|max:5242880',
             'lesson_id' => 'required',
             'title' => 'required|string',
             'type' => 'required|string',

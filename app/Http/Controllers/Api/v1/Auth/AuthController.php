@@ -62,12 +62,35 @@ class AuthController extends Controller
     )]
     public function register(RegisterRequest $request): JsonResponse
     {
+        $packageId = $request->package_id;
+        $stageId = $request->stage_id;
+        $gradeId = $request->grade_id;
+        $subscriptionExpiry = $request->subscription_expiry;
+
+        if ($packageId) {
+            $package = \App\Models\Package::find($packageId);
+            if ($package) {
+                $stageId = $package->educational_stage_id;
+                $gradeId = $package->grade_id;
+                if (!$subscriptionExpiry) {
+                    $subscriptionExpiry = $package->expiry_date;
+                }
+            }
+        }
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role ?? \App\Enums\UserRole::Student->value,
+            'is_active' => $request->boolean('is_active', true),
+            'package_id' => $packageId,
+            'stage_id' => $stageId,
+            'grade_id' => $gradeId,
+            'subscription_expiry' => $subscriptionExpiry,
         ]);
+
+        $user->load(['stage', 'grade', 'package']);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

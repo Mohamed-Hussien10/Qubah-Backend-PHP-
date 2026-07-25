@@ -13,7 +13,12 @@ class RegisterRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $expectedToken = env('REGISTER_TOKEN');
+        if (empty($expectedToken)) {
+            return false;
+        }
+        $token = $this->header('X-REGISTER-TOKEN');
+        return $token === $expectedToken;
     }
 
     /**
@@ -28,6 +33,11 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role' => ['sometimes', Rule::enum(UserRole::class)],
+            'package_id' => ['nullable', 'integer', 'exists:packages,id'],
+            'stage_id' => ['nullable', 'integer', 'exists:educational_stages,id'],
+            'grade_id' => ['nullable', 'integer', 'exists:grades,id'],
+            'subscription_expiry' => ['nullable', 'date'],
+            'is_active' => ['nullable', 'boolean'],
         ];
     }
 }

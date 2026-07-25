@@ -148,7 +148,7 @@ class FreeTrialController extends Controller
     public function uploadLessonFile(Request $request)
     {
         $request->validate([
-            'file' => 'required|file',
+            'file' => 'required|file|max:5242880',
             'free_trial_subject_id' => 'required|exists:free_trial_subjects,id',
             'title' => 'required|string',
             'type' => 'required|string',
