@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
+use App\Services\StorageCleaner;
 use Illuminate\Http\Request;
 
 class ThumbnailController extends Controller
@@ -49,10 +50,9 @@ class ThumbnailController extends Controller
             'path' => 'required|string'
         ]);
 
-        $path = str_replace('thumbnails/', '', $request->input('path'));
+        $path = $request->input('path');
 
-        if (\Illuminate\Support\Facades\Storage::disk('thumbnails')->exists($path)) {
-            \Illuminate\Support\Facades\Storage::disk('thumbnails')->delete($path);
+        if (StorageCleaner::deleteThumbnail($path)) {
             return response()->json([
                 'success' => true,
                 'message' => 'Thumbnail deleted successfully.'
@@ -61,7 +61,7 @@ class ThumbnailController extends Controller
 
         return response()->json([
             'success' => false,
-            'message' => 'Thumbnail not found.'
-        ], 404);
+            'message' => 'Thumbnail not found or is currently referenced by a database record.'
+        ], 400);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\FreeTrialEducationalStage;
 use App\Models\FreeTrialGrade;
 use App\Models\FreeTrialSubject;
 use App\Models\FreeTrialLessonFile;
+use App\Services\StorageCleaner;
 use Illuminate\Http\Request;
 
 class FreeTrialController extends Controller
@@ -66,9 +67,14 @@ class FreeTrialController extends Controller
         return response()->json(['data' => $stage]);
     }
 
-    public function destroyStage($id)
+    public function destroyStage(Request $request, $id)
     {
-        FreeTrialEducationalStage::findOrFail($id)->delete();
+        $stage = FreeTrialEducationalStage::withTrashed()->findOrFail($id);
+        if ($request->boolean('force')) {
+            $stage->forceDelete();
+        } else {
+            $stage->delete();
+        }
         return response()->json(['success' => true]);
     }
 
@@ -94,9 +100,14 @@ class FreeTrialController extends Controller
         return response()->json(['data' => $grade]);
     }
 
-    public function destroyGrade($id)
+    public function destroyGrade(Request $request, $id)
     {
-        FreeTrialGrade::findOrFail($id)->delete();
+        $grade = FreeTrialGrade::withTrashed()->findOrFail($id);
+        if ($request->boolean('force')) {
+            $grade->forceDelete();
+        } else {
+            $grade->delete();
+        }
         return response()->json(['success' => true]);
     }
 
@@ -122,9 +133,14 @@ class FreeTrialController extends Controller
         return response()->json(['data' => $subject]);
     }
 
-    public function destroySubject($id)
+    public function destroySubject(Request $request, $id)
     {
-        FreeTrialSubject::findOrFail($id)->delete();
+        $subject = FreeTrialSubject::withTrashed()->findOrFail($id);
+        if ($request->boolean('force')) {
+            $subject->forceDelete();
+        } else {
+            $subject->delete();
+        }
         return response()->json(['success' => true]);
     }
 
@@ -170,8 +186,13 @@ class FreeTrialController extends Controller
                 'mime_type' => $file->getMimeType()
             ];
 
-            $model = FreeTrialLessonFile::create($data);
-            return response()->json(['data' => $model], 201);
+            try {
+                $model = FreeTrialLessonFile::create($data);
+                return response()->json(['data' => $model], 201);
+            } catch (\Throwable $e) {
+                StorageCleaner::deleteFile($data['file_path']);
+                throw $e;
+            }
         }
 
         return response()->json([
@@ -187,9 +208,14 @@ class FreeTrialController extends Controller
         return response()->json(['data' => $file]);
     }
 
-    public function destroyLessonFile($id)
+    public function destroyLessonFile(Request $request, $id)
     {
-        FreeTrialLessonFile::findOrFail($id)->delete();
+        $file = FreeTrialLessonFile::withTrashed()->findOrFail($id);
+        if ($request->boolean('force')) {
+            $file->forceDelete();
+        } else {
+            $file->delete();
+        }
         return response()->json(['success' => true]);
     }
 }

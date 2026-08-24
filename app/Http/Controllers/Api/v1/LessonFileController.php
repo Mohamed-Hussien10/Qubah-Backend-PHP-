@@ -3,7 +3,9 @@ namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
 use App\Services\LessonFileService;
+use App\Services\StorageCleaner;
 use App\Http\Resources\LessonFileResource;
+use App\Models\LessonFile;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -131,8 +133,14 @@ class LessonFileController extends Controller
                 'mime_type' => $file->getMimeType()
             ];
 
-            $model = $this->service->create($data);
-            return new LessonFileResource($model);
+            try {
+                $model = $this->service->create($data);
+                return new LessonFileResource($model);
+            } catch (\Throwable $e) {
+                // If DB insert fails, clean up the newly uploaded orphaned file
+                StorageCleaner::deleteFile($data['file_path']);
+                throw $e;
+            }
         }
 
         return response()->json([
@@ -183,7 +191,8 @@ class LessonFileController extends Controller
         tags: ['Lesson Files'],
         security: [['sanctum' => []]],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'force', in: 'query', required: false, schema: new OA\Schema(type: 'boolean'))
         ],
         responses: [
             new OA\Response(response: 200, description: 'Deleted successfully'),
@@ -191,9 +200,14 @@ class LessonFileController extends Controller
             new OA\Response(response: 404, description: 'Lesson file not found')
         ]
     )]
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $this->service->delete($id);
+        $model = LessonFile::withTrashed()->findOrFail($id);
+        if ($request->boolean('force')) {
+            $model->forceDelete();
+        } else {
+            $model->delete();
+        }
         return response()->json(['success' => true]);
     }
 }
