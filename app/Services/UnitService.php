@@ -13,9 +13,12 @@ class UnitService
     public function getById($id)
     {
         $query = Unit::where('id', $id)->where('is_active', true);
-        $query->with(['lessons' => function ($q) {
-            $q->where('is_active', true)->orderBy('order')->withCount('lessonFiles');
-        }]);
+        $query->with([
+            'lessons' => function ($q) {
+                $q->where('is_active', true)->orderBy('order')->withCount('lessonFiles');
+            },
+            'subject.section.grade'
+        ]);
         return $query->firstOrFail();
     }
 

@@ -67,6 +67,7 @@ class AuthController extends Controller
         $gradeId = $request->grade_id;
         $subscriptionExpiry = $request->subscription_expiry;
 
+        $subscriptionStatus = 'none';
         if ($packageId) {
             $package = \App\Models\Package::find($packageId);
             if ($package) {
@@ -75,6 +76,7 @@ class AuthController extends Controller
                 if (!$subscriptionExpiry) {
                     $subscriptionExpiry = $package->expiry_date;
                 }
+                $subscriptionStatus = 'active';
             }
         }
 
@@ -84,13 +86,14 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role ?? \App\Enums\UserRole::Student->value,
             'is_active' => $request->boolean('is_active', true),
+            'subscription_status' => $subscriptionStatus,
             'package_id' => $packageId,
             'stage_id' => $stageId,
             'grade_id' => $gradeId,
             'subscription_expiry' => $subscriptionExpiry,
         ]);
 
-        $user->load(['stage', 'grade', 'package']);
+        $user->load(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject']);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -161,7 +164,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        $user->load(['stage', 'grade']);
+        $user->load(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject']);
 
         return response()->json([
             'message' => 'Logged in successfully',
@@ -233,7 +236,7 @@ class AuthController extends Controller
     )]
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load(['stage', 'grade']);
+        $user = $request->user()->load(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject']);
         return response()->json([
             'message' => 'Profile retrieved successfully',
             'data' => [
@@ -283,6 +286,7 @@ class AuthController extends Controller
         }
 
         $user->save();
+        $user->load(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject']);
 
         return response()->json([
             'message' => 'Profile updated successfully',

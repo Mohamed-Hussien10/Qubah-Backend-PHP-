@@ -133,6 +133,7 @@ class UserController extends Controller
         $gradeId = $request->grade_id;
         $subscriptionExpiry = $request->subscription_expiry;
 
+        $subscriptionStatus = 'none';
         if ($packageId) {
             $package = Package::find($packageId);
             if ($package) {
@@ -141,6 +142,7 @@ class UserController extends Controller
                 if (!$subscriptionExpiry) {
                     $subscriptionExpiry = $package->expiry_date;
                 }
+                $subscriptionStatus = 'active';
             }
         }
 
@@ -149,6 +151,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'is_active' => $request->boolean('is_active', true),
+            'subscription_status' => $request->subscription_status ?? $subscriptionStatus,
             'password' => Hash::make($request->password),
             'package_id' => $packageId,
             'stage_id' => $stageId,
@@ -211,7 +214,7 @@ class UserController extends Controller
             'subscription_expiry' => 'nullable|date',
         ]);
 
-        $updateData = $request->only(['name', 'email', 'role', 'is_active', 'package_id', 'stage_id', 'grade_id', 'subscription_expiry']);
+        $updateData = $request->only(['name', 'email', 'role', 'is_active', 'package_id', 'stage_id', 'grade_id', 'subscription_expiry', 'subscription_status']);
 
         if ($request->has('package_id')) {
             $packageId = $request->package_id;
@@ -222,6 +225,9 @@ class UserController extends Controller
                     $updateData['grade_id'] = $package->grade_id;
                     if (!$request->has('subscription_expiry') || !$request->subscription_expiry) {
                         $updateData['subscription_expiry'] = $package->expiry_date;
+                    }
+                    if (!$request->has('subscription_status') && ($user->subscription_status === 'none' || empty($user->subscription_status))) {
+                        $updateData['subscription_status'] = 'active';
                     }
                 }
             } else {
