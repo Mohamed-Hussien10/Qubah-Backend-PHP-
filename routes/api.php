@@ -77,6 +77,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/units/{id}', [UnitController::class, 'show']);
     Route::get('/lessons/{id}', [LessonController::class, 'show']);
     Route::get('/lesson-files/{id}', [LessonFileController::class, 'show']);
+    Route::get('/stages/{id}/file-thumbnails', [ThumbnailController::class, 'getStageDefaultThumbnails']);
+    Route::get('/educational-stages/{id}/file-thumbnails', [ThumbnailController::class, 'getStageDefaultThumbnails']);
 
     // Packages
     Route::get('/packages', [PackageController::class, 'index']);
@@ -167,6 +169,12 @@ Route::prefix('v1')->group(function () {
             Route::get('/dashboard/revenue', [DashboardController::class, 'getRevenueData']);
             Route::get('/dashboard/users', [DashboardController::class, 'getUserGrowthData']);
             Route::get('/dashboard/activity', [DashboardController::class, 'getRecentActivity']);
+
+            // Stage Default Thumbnails Management
+            Route::post('/stages/{id}/file-thumbnails', [ThumbnailController::class, 'saveStageDefaultThumbnails']);
+            Route::post('/educational-stages/{id}/file-thumbnails', [ThumbnailController::class, 'saveStageDefaultThumbnails']);
+            Route::delete('/stages/{id}/file-thumbnails/{format}', [ThumbnailController::class, 'deleteStageDefaultThumbnail']);
+            Route::delete('/educational-stages/{id}/file-thumbnails/{format}', [ThumbnailController::class, 'deleteStageDefaultThumbnail']);
         });
     });
 });
