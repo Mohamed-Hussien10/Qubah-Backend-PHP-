@@ -11,10 +11,10 @@ use App\Http\Controllers\Api\v1\LessonController;
 use App\Http\Controllers\Api\v1\LessonFileController;
 use App\Http\Controllers\Api\v1\UserController;
 use App\Http\Controllers\Api\v1\SettingsController;
-use App\Http\Controllers\Api\v1\DashboardController;
 use App\Http\Controllers\Api\v1\FreeTrialController;
 use App\Http\Controllers\Api\v1\PackageController;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\CheckSubscription;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -49,12 +49,32 @@ Route::prefix('v1')->group(function () {
         ]);
     })->where('path', '.*');
 
-    // Public Proxy for Files (PDFs, etc) to bypass CORS
-    Route::get('/files/{path}', function ($path) {
+    // Secure Proxy for Files (PDFs, ZIPs, etc) - Free trial files remain public, paid files require auth & subscription
+    Route::get('/files/{path}', function (\Illuminate\Http\Request $request, $path) {
         $fullPath = storage_path('app/public/' . $path);
         if (!file_exists($fullPath)) {
             abort(404);
         }
+
+        $isPublic = str_starts_with($path, 'free_trial_') || str_starts_with($path, 'thumbnails/');
+        
+        if (!$isPublic) {
+            $user = auth('sanctum')->user();
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                    'error' => 'unauthenticated'
+                ], 401);
+            }
+
+            if (!$user->isAdmin() && method_exists($user, 'hasActiveSubscription') && !$user->hasActiveSubscription()) {
+                return response()->json([
+                    'message' => 'عفواً، لا يوجد اشتراك سارٍ لهذا الحساب.',
+                    'error' => 'subscription_expired'
+                ], 403);
+            }
+        }
+
         $mime = \Illuminate\Support\Facades\File::mimeType($fullPath);
         return response()->file($fullPath, [
             'Content-Type' => $mime,
@@ -68,19 +88,7 @@ Route::prefix('v1')->group(function () {
     // Public Settings Config
     Route::get('/settings/config', [SettingsController::class, 'getPublicSettings']);
 
-    // Public Hierarchical Content Navigation
-    Route::get('/educational-stages', [EducationalStageController::class, 'index']);
-    Route::get('/educational-stages/{id}', [EducationalStageController::class, 'show']);
-    Route::get('/grades/{id}', [GradeController::class, 'show']);
-    Route::get('/sections/{id}', [SectionController::class, 'show']);
-    Route::get('/subjects/{id}', [SubjectController::class, 'show']);
-    Route::get('/units/{id}', [UnitController::class, 'show']);
-    Route::get('/lessons/{id}', [LessonController::class, 'show']);
-    Route::get('/lesson-files/{id}', [LessonFileController::class, 'show']);
-    Route::get('/stages/{id}/file-thumbnails', [ThumbnailController::class, 'getStageDefaultThumbnails']);
-    Route::get('/educational-stages/{id}/file-thumbnails', [ThumbnailController::class, 'getStageDefaultThumbnails']);
-
-    // Packages
+    // Packages (Public)
     Route::get('/packages', [PackageController::class, 'index']);
     Route::get('/packages/{id}', [PackageController::class, 'show']);
 
@@ -91,6 +99,20 @@ Route::prefix('v1')->group(function () {
     Route::get('/free-trial/subjects/{id}', [FreeTrialController::class, 'showSubject']);
     Route::get('/free-trial/subjects/{id}/lesson-files', [FreeTrialController::class, 'getLessonFilesBySubject']);
     Route::get('/free-trial/lesson-files/{id}', [FreeTrialController::class, 'showLessonFile']);
+
+    // Protected Content Navigation (Requires auth:sanctum and active subscription)
+    Route::middleware(['auth:sanctum', CheckSubscription::class])->group(function () {
+        Route::get('/educational-stages', [EducationalStageController::class, 'index']);
+        Route::get('/educational-stages/{id}', [EducationalStageController::class, 'show']);
+        Route::get('/grades/{id}', [GradeController::class, 'show']);
+        Route::get('/sections/{id}', [SectionController::class, 'show']);
+        Route::get('/subjects/{id}', [SubjectController::class, 'show']);
+        Route::get('/units/{id}', [UnitController::class, 'show']);
+        Route::get('/lessons/{id}', [LessonController::class, 'show']);
+        Route::get('/lesson-files/{id}', [LessonFileController::class, 'show']);
+        Route::get('/stages/{id}/file-thumbnails', [ThumbnailController::class, 'getStageDefaultThumbnails']);
+        Route::get('/educational-stages/{id}/file-thumbnails', [ThumbnailController::class, 'getStageDefaultThumbnails']);
+    });
 
     // Protected Routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -163,12 +185,6 @@ Route::prefix('v1')->group(function () {
             // Settings Management
             Route::get('/settings', [SettingsController::class, 'getSettings']);
             Route::put('/settings', [SettingsController::class, 'updateSettings']);
-
-            // Dashboard aggregate statistics
-            Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
-            Route::get('/dashboard/revenue', [DashboardController::class, 'getRevenueData']);
-            Route::get('/dashboard/users', [DashboardController::class, 'getUserGrowthData']);
-            Route::get('/dashboard/activity', [DashboardController::class, 'getRecentActivity']);
 
             // Stage Default Thumbnails Management
             Route::post('/stages/{id}/file-thumbnails', [ThumbnailController::class, 'saveStageDefaultThumbnails']);

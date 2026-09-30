@@ -78,6 +78,30 @@ class User extends Authenticatable
         return $this->role === UserRole::Student;
     }
 
+    /**
+     * Check if user has an active valid subscription or is admin.
+     */
+    public function hasActiveSubscription(): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if ($this->is_active === false) {
+            return false;
+        }
+
+        if ($this->subscription_expiry) {
+            return $this->subscription_expiry->isFuture() || $this->subscription_expiry->isToday();
+        }
+
+        if ($this->package && $this->package->expiry_date) {
+            return $this->package->expiry_date >= now()->toDateString();
+        }
+
+        return $this->package_id !== null;
+    }
+
     // ── Relationships ─────────────────────────────────────────────────────
 
     /**
