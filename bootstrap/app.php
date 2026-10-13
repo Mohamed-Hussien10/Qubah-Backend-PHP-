@@ -14,7 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (PostTooLargeException $e, Request $request) {
@@ -24,6 +24,22 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'حجم الملف أكبر من الحد المسموح به (الحد الأقصى 5 جيجابايت).',
                     'error' => 'The uploaded payload is too large. Maximum allowed size is 5GB.'
                 ], 413);
+            }
+        });
+
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
+            return response()->json([
+                'message' => 'Unauthenticated.',
+                'error' => 'unauthenticated'
+            ], 401);
+        });
+
+        $exceptions->render(function (\Symfony\Component\Routing\Exception\RouteNotFoundException $e, Request $request) {
+            if (str_contains($e->getMessage(), '[login]')) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                    'error' => 'unauthenticated'
+                ], 401);
             }
         });
     })->create();

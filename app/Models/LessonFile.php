@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LessonFile extends Model {
     use HasFactory, SoftDeletes;
@@ -42,9 +41,5 @@ class LessonFile extends Model {
 
     public function lesson(): BelongsTo { 
         return $this->belongsTo(Lesson::class); 
-    }
-    
-    public function progress(): HasMany { 
-        return $this->hasMany(UserProgress::class); 
     }
 }

@@ -21,3 +21,9 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+*.zip
+*.sql
+*.bak
+*_old.php
+*_last_one.php
+*qubahom_app_backup*

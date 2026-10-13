@@ -33,7 +33,7 @@ class FreeTrialLessonFile extends Model
         if (!$this->file_path) return null;
         if (str_starts_with($this->file_path, 'http')) return $this->file_path;
         $path = str_starts_with($this->file_path, 'storage/') ? substr($this->file_path, 8) : $this->file_path;
-        return url('storage/' . $path);
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute('api.files.show', now()->addHours(6), ['path' => $path]);
     }
 
     protected $casts = [

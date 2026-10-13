@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
         User::create([
             'name' => 'Admin User',
             'email' => 'admin@qubah.com',
-            'password' => Hash::make('password'),
+            'password' => Hash::make(env('ADMIN_PASSWORD', 'SecureP@ssw0rd!123')),
             'role' => UserRole::Admin->value,
             'is_active' => true,
         ]);
@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
         $parent = User::create([
             'name' => 'John Parent',
             'email' => 'parent@qubah.com',
-            'password' => Hash::make('password'),
+            'password' => Hash::make(env('ADMIN_PASSWORD', 'SecureP@ssw0rd!123')),
             'role' => UserRole::Parent_->value,
             'is_active' => true,
         ]);
@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
         $student = User::create([
             'name' => 'Timmy Student',
             'email' => 'student@qubah.com',
-            'password' => Hash::make('password'),
+            'password' => Hash::make(env('ADMIN_PASSWORD', 'SecureP@ssw0rd!123')),
             'role' => UserRole::Student->value,
             'is_active' => true,
             'subscription_status' => 'active',

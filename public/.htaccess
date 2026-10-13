@@ -40,8 +40,21 @@
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
+    # Block direct access to backup files, databases, archives, and environment files
+    RewriteRule \.(zip|tar\.gz|tgz|rar|7z|sql|bak|backup|old|env.*)$ - [F,L,NC]
+
     # Send Requests To Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+<FilesMatch "(^\..*|\.zip|\.tar\.gz|\.rar|\.7z|\.sql|\.bak|\.backup|\.env.*)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

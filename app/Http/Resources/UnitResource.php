@@ -13,8 +13,10 @@ class UnitResource extends JsonResource
         $lessons = $this->whenLoaded('lessons');
         
         $user = auth('sanctum')->user();
-        if ($user && $user->role->value === 'student' && $lessons instanceof \Illuminate\Support\Collection) {
-            if (!$this->checkStudentAccess($user)) {
+        $isAdminOrParent = $user && in_array($user->role->value, ['admin', 'parent']);
+        
+        if (!$isAdminOrParent && $lessons instanceof \Illuminate\Support\Collection) {
+            if (!$user || !$this->checkStudentAccess($user)) {
                 // Return only the first lesson (sorted by order if possible, or just first element)
                 $lessons = collect([$lessons->first()])->filter(); 
             }

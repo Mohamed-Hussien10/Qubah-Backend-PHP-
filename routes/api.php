@@ -22,7 +22,8 @@ Route::prefix('v1')->group(function () {
     // Auth Routes
     Route::prefix('auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
-        Route::post('/login', [AuthController::class, 'login']);
+        Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+        Route::get('/login', fn () => response()->json(['message' => 'Unauthenticated.', 'error' => 'unauthenticated'], 401))->name('login');
         
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
@@ -36,10 +37,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/user/change-password', [AuthController::class, 'changePassword']);
     });
 
-    // Public Proxy for Thumbnails to bypass CORS and Authentication for NetworkImage
+    // Public Proxy for Thumbnails to bypass CORS with path-traversal protection
     Route::get('/thumbnails/{path}', function ($path) {
-        $fullPath = storage_path('app/public/thumbnails/' . $path);
-        if (!file_exists($fullPath)) {
+        if (str_contains($path, '..')) {
+            abort(403);
+        }
+        $baseDir = realpath(storage_path('app/public/thumbnails'));
+        $targetPath = storage_path('app/public/thumbnails/' . $path);
+        $fullPath = realpath($targetPath);
+        if (!$fullPath || !$baseDir || !str_starts_with($fullPath, $baseDir) || !file_exists($fullPath)) {
             abort(404);
         }
         $mime = \Illuminate\Support\Facades\File::mimeType($fullPath);
@@ -49,30 +55,30 @@ Route::prefix('v1')->group(function () {
         ]);
     })->where('path', '.*');
 
-    // Secure Proxy for Files (PDFs, ZIPs, etc) - Free trial files remain public, paid files require auth & subscription
+    // Secure Proxy for Files (PDFs, Videos, Audios) - require signed URL or active Free Trial lesson file
     Route::get('/files/{path}', function (\Illuminate\Http\Request $request, $path) {
-        $fullPath = storage_path('app/public/' . $path);
-        if (!file_exists($fullPath)) {
+        if (str_contains($path, '..')) {
+            abort(403);
+        }
+        $baseDir = realpath(storage_path('app/public'));
+        $targetPath = storage_path('app/public/' . $path);
+        $fullPath = realpath($targetPath);
+        if (!$fullPath || !$baseDir || !str_starts_with($fullPath, $baseDir) || !file_exists($fullPath)) {
             abort(404);
         }
 
-        $isPublic = str_starts_with($path, 'free_trial_') || str_starts_with($path, 'thumbnails/');
-        
-        if (!$isPublic) {
-            $user = auth('sanctum')->user();
-            if (!$user) {
-                return response()->json([
-                    'message' => 'Unauthenticated.',
-                    'error' => 'unauthenticated'
-                ], 401);
-            }
+        $isValidSignature = $request->hasValidSignature();
+        $isFreeTrialFile = false;
+        if (!$isValidSignature) {
+            $cleanPath = preg_replace('/^storage\//', '', $path);
+            $isFreeTrialFile = \App\Models\FreeTrialLessonFile::where('file_path', $path)
+                ->orWhere('file_path', $cleanPath)
+                ->orWhere('file_path', 'storage/' . $cleanPath)
+                ->exists();
+        }
 
-            if (!$user->isAdmin() && method_exists($user, 'hasActiveSubscription') && !$user->hasActiveSubscription()) {
-                return response()->json([
-                    'message' => 'عفواً، لا يوجد اشتراك سارٍ لهذا الحساب.',
-                    'error' => 'subscription_expired'
-                ], 403);
-            }
+        if (!$isValidSignature && !$isFreeTrialFile) {
+            abort(401);
         }
 
         $mime = \Illuminate\Support\Facades\File::mimeType($fullPath);
@@ -83,7 +89,7 @@ Route::prefix('v1')->group(function () {
             'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization, X-Request-With',
             'Access-Control-Expose-Headers' => 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range',
         ]);
-    })->where('path', '.*');
+    })->name('api.files.show')->where('path', '.*');
 
     // Public Settings Config
     Route::get('/settings/config', [SettingsController::class, 'getPublicSettings']);
@@ -123,7 +129,6 @@ Route::prefix('v1')->group(function () {
 
         // Admin Content & Management (Requires Admin Role)
         Route::middleware(CheckRole::class.':admin')->group(function () {
-            
             // Educational Hierarchy Management
             Route::post('/educational-stages', [EducationalStageController::class, 'store']);
             Route::put('/educational-stages/{id}', [EducationalStageController::class, 'update']);

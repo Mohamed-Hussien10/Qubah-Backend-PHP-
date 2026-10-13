@@ -102,7 +102,6 @@ class AuthController extends Controller
             'data' => [
                 'user' => new UserResource($user),
                 'access_token' => $token,
-                'refresh_token' => $token, // Simplified for now, real implementation would use proper refresh tokens
             ]
         ], 201);
     }
@@ -114,7 +113,7 @@ class AuthController extends Controller
         path: '/api/v1/auth/login',
         operationId: 'login',
         summary: 'Login',
-        description: 'Authenticate a user with email and password. Returns user data and a Bearer token.',
+        description: 'Authenticate a user with email and practical token.',
         tags: ['Authentication'],
         security: [],
         requestBody: new OA\RequestBody(
@@ -140,7 +139,6 @@ class AuthController extends Controller
                             properties: [
                                 new OA\Property(property: 'user', ref: '#/components/schemas/UserResource'),
                                 new OA\Property(property: 'access_token', type: 'string', example: '2|xyz789token...'),
-                                new OA\Property(property: 'refresh_token', type: 'string', example: '2|xyz789token...'),
                             ]
                         ),
                     ]
@@ -171,7 +169,6 @@ class AuthController extends Controller
             'data' => [
                 'user' => new UserResource($user),
                 'access_token' => $token,
-                'refresh_token' => $token,
             ]
         ]);
     }
