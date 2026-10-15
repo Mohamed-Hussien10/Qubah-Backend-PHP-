@@ -5,7 +5,6 @@ namespace App\Enums;
 enum UserRole: string
 {
     case Admin = 'admin';
-    case Parent_ = 'parent';
     case Student = 'student';
 
     /**

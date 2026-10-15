@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\v1\UserController;
 use App\Http\Controllers\Api\v1\SettingsController;
 use App\Http\Controllers\Api\v1\FreeTrialController;
 use App\Http\Controllers\Api\v1\PackageController;
+use App\Http\Controllers\Api\v1\AnalyticsController;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\CheckSubscription;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login'])->name('login.post');
         Route::get('/login', fn () => response()->json(['message' => 'Unauthenticated.', 'error' => 'unauthenticated'], 401))->name('login');
+        Route::post('/refresh', [AuthController::class, 'refresh']);
         
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
@@ -196,6 +198,14 @@ Route::prefix('v1')->group(function () {
             Route::post('/educational-stages/{id}/file-thumbnails', [ThumbnailController::class, 'saveStageDefaultThumbnails']);
             Route::delete('/stages/{id}/file-thumbnails/{format}', [ThumbnailController::class, 'deleteStageDefaultThumbnail']);
             Route::delete('/educational-stages/{id}/file-thumbnails/{format}', [ThumbnailController::class, 'deleteStageDefaultThumbnail']);
+
+            // Analytics & Dashboard Reports
+            Route::get('/analytics/users', [AnalyticsController::class, 'users']);
+            Route::get('/analytics/content', [AnalyticsController::class, 'content']);
+            Route::get('/analytics/revenue', [AnalyticsController::class, 'revenue']);
+            Route::get('/dashboard/stats', [AnalyticsController::class, 'dashboardStats']);
+            Route::get('/dashboard/users', [AnalyticsController::class, 'dashboardUsers']);
+            Route::get('/dashboard/activity', [AnalyticsController::class, 'dashboardActivity']);
         });
     });
 });

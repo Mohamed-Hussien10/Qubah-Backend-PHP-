@@ -102,6 +102,7 @@ class AuthController extends Controller
             'data' => [
                 'user' => new UserResource($user),
                 'access_token' => $token,
+                'refresh_token' => $token,
             ]
         ], 201);
     }
@@ -139,6 +140,7 @@ class AuthController extends Controller
                             properties: [
                                 new OA\Property(property: 'user', ref: '#/components/schemas/UserResource'),
                                 new OA\Property(property: 'access_token', type: 'string', example: '2|xyz789token...'),
+                                new OA\Property(property: 'refresh_token', type: 'string', example: '2|xyz789token...'),
                             ]
                         ),
                     ]
@@ -169,6 +171,7 @@ class AuthController extends Controller
             'data' => [
                 'user' => new UserResource($user),
                 'access_token' => $token,
+                'refresh_token' => $token,
             ]
         ]);
     }
@@ -336,6 +339,38 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Password changed successfully'
+        ]);
+    }
+
+    /**
+     * Refresh access token.
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user && $request->filled('refresh_token')) {
+            $token = \Laravel\Sanctum\PersonalAccessToken::findToken($request->refresh_token);
+            if ($token) {
+                $user = $token->tokenable;
+            }
+        }
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.',
+                'error' => 'unauthenticated',
+            ], 401);
+        }
+
+        $newToken = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Token refreshed successfully',
+            'data' => [
+                'access_token' => $newToken,
+                'refresh_token' => $newToken,
+            ]
         ]);
     }
 }
