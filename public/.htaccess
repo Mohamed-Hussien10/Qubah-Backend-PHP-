@@ -20,12 +20,23 @@
     php_value max_input_time 7200
 </IfModule>
 
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-XSRF-Token, App-Version"
+    Header always set Access-Control-Expose-Headers "Accept-Ranges, Content-Encoding, Content-Length, Content-Range"
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
 
     RewriteEngine On
+
+    # Handle OPTIONS method for CORS preflight immediately
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ index.php [QSA,L]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
@@ -35,13 +46,14 @@
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
-    # Redirect Trailing Slashes If Not A Folder...
+    # Redirect Trailing Slashes If Not A Folder (ONLY for GET/HEAD to protect POST/PUT payloads)
+    RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$ [NC]
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Block direct access to backup files, databases, archives, and environment files
-    RewriteRule \.(zip|tar\.gz|tgz|rar|7z|sql|bak|backup|old|env.*)$ - [F,L,NC]
+    # Block direct access to backup files, databases, archives, and environment files (ZIP allowed for SCORM lesson files)
+    RewriteRule \.(tar\.gz|tgz|rar|7z|sql|bak|backup|old|env.*)$ - [F,L,NC]
 
     # Send Requests To Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d
@@ -49,7 +61,7 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
-<FilesMatch "(^\..*|\.zip|\.tar\.gz|\.rar|\.7z|\.sql|\.bak|\.backup|\.env.*)$">
+<FilesMatch "(^\..*|\.tar\.gz|\.rar|\.7z|\.sql|\.bak|\.backup|\.env.*)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

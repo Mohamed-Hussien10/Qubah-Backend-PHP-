@@ -50,7 +50,7 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'role' => $this->role->value,
+            'role' => $this->role instanceof \App\Enums\UserRole ? $this->role->value : (string)($this->role ?? 'student'),
             'is_active' => $this->is_active ?? true,
             'subscription_status' => $subscriptionStatus,
             'stage_id' => $this->stage_id,
@@ -60,7 +60,7 @@ class UserResource extends JsonResource
             'grade' => new GradeResource($this->whenLoaded('grade')),
             'package' => $this->whenLoaded('package'),
             'subscription_expiry' => $subscriptionExpiry ? \Carbon\Carbon::parse($subscriptionExpiry)->toIso8601String() : null,
-            'last_login' => $this->last_login ? $this->last_login->toIso8601String() : null,
+            'last_login' => $this->last_login ? \Carbon\Carbon::parse($this->last_login)->toIso8601String() : null,
             'email_verified_at' => $this->email_verified_at,
             'created_at' => $this->created_at,
         ];

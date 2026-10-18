@@ -2,6 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 
+// Root-level API routes: /educational-stages, /free-trial/stages, /auth/login, etc.
+// Required because the production mobile app makes requests with leading slashes,
+// which causes Dio to resolve them against the domain root (stripping /api/v1/).
+Route::middleware('api')->group(function () {
+    require __DIR__ . '/api_v1_routes.php';
+});
+
 Route::get('/', function () {
     return view('welcome');
 });

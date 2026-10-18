@@ -18,7 +18,7 @@ class LessonFileResource extends JsonResource
             'is_active' => $this->is_active,
             'type' => $this->type,
             'file_path' => $this->file_path,
-            'file_url' => $this->file_path ? (str_starts_with($this->file_path, 'http') ? $this->file_path : \Illuminate\Support\Facades\URL::temporarySignedRoute('api.files.show', now()->addHours(6), ['path' => preg_replace('/^storage\//', '', $this->file_path)])) : null,
+            'file_url' => $this->file_path ? (str_starts_with($this->file_path, 'http') ? $this->file_path : url('storage/' . preg_replace('/^storage\//', '', $this->file_path))) : null,
             'metadata' => $this->metadata,
             'lesson_id' => $this->lesson_id,
             'created_at' => $this->created_at,

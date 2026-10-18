@@ -151,7 +151,10 @@ class AuthController extends Controller
     )]
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        $input = trim($request->email);
+        $user = User::whereRaw('LOWER(email) = ?', [strtolower($input)])
+            ->orWhere('name', $input)
+            ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -159,10 +162,19 @@ class AuthController extends Controller
             ]);
         }
 
+        if (!$user->is_active) {
+            return response()->json([
+                'message' => 'الحساب غير مفعّل، يُرجى التواصل مع الإدارة.',
+                'error' => 'account_inactive'
+            ], 403);
+        }
+
         // Revoke all existing tokens (optional, for security)
         $user->tokens()->delete();
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        $user->update(['last_login' => now()]);
 
         $user->load(['stage', 'grade', 'package.educationalStage', 'package.grade', 'package.section', 'package.subject']);
 

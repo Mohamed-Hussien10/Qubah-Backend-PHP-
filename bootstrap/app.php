@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn () => null);
+        $middleware->validateCsrfTokens(except: [
+            '*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (PostTooLargeException $e, Request $request) {
@@ -40,6 +43,15 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'Unauthenticated.',
                     'error' => 'unauthenticated'
                 ], 401);
+            }
+        });
+
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson() || !$request->is('dashboard/*')) {
+                return response()->json([
+                    'message' => 'The requested resource was not found.',
+                    'error' => 'not_found'
+                ], 404);
             }
         });
     })->create();
