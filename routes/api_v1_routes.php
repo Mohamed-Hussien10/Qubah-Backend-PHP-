@@ -15,6 +15,10 @@ use App\Http\Controllers\Api\v1\FreeTrialController;
 use App\Http\Controllers\Api\v1\PackageController;
 use App\Http\Controllers\Api\v1\AnalyticsController;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\CheckSubscription;
+use App\Services\Access\ContentAccessService;
+use App\Models\FreeTrialLessonFile;
+use App\Models\LessonFile;
 use Illuminate\Support\Facades\Route;
 
 // ── Auth Endpoints (with and without /auth prefix) ──────────────────────────
@@ -62,6 +66,45 @@ Route::get('/thumbnails/{path}', function ($path) {
     ]);
 })->where('path', '.*');
 
+// ── Clean Path-based Signed Files Proxy (e.g. /files/s/{signature}/{expires}/path/to/file.zip)
+// Guarantees URL ends with .zip or .mp4 so Flutter's .endsWith('.zip') validation passes!
+Route::get('/files/s/{signature}/{expires}/{path}', function ($signature, $expires, $path) {
+    if (str_contains($path, '..')) {
+        abort(403);
+    }
+
+    $isValid = ContentAccessService::validateSecureFilePath($signature, $expires, $path);
+    if (!$isValid) {
+        $isValid = ContentAccessService::isFilePathFreeTrial($path);
+    }
+
+    if (!$isValid) {
+        return response()->json([
+            'message' => 'عفواً، رابط الملف غير صالح أو منتهي الصلاحية.',
+            'error' => 'forbidden',
+            'requires_subscription' => true,
+        ], 403);
+    }
+
+    $baseDir = realpath(storage_path('app/public'));
+    $targetPath = storage_path('app/public/' . $path);
+    $fullPath = realpath($targetPath);
+    if (!$fullPath || !$baseDir || !str_starts_with($fullPath, $baseDir) || !file_exists($fullPath)) {
+        abort(404);
+    }
+
+    $mime = \Illuminate\Support\Facades\File::mimeType($fullPath);
+    return response()->file($fullPath, [
+        'Content-Type' => $mime,
+        'Accept-Ranges' => 'bytes',
+        'Access-Control-Allow-Origin' => '*',
+        'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+        'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization, X-Request-With',
+        'Access-Control-Expose-Headers' => 'Accept-Ranges, Content-Encoding, Content-Length, Content-Range',
+    ]);
+})->where('path', '.*');
+
+// ── Direct Files Proxy: verify query signature or free trial / preview
 Route::get('/files/{path}', function (\Illuminate\Http\Request $request, $path) {
     if (str_contains($path, '..')) {
         abort(403);
@@ -73,6 +116,42 @@ Route::get('/files/{path}', function (\Illuminate\Http\Request $request, $path) 
         abort(404);
     }
 
+    // 1. Check valid cryptographic signature
+    $isAllowed = $request->hasValidSignature();
+
+    // 2. Check if the file belongs to Free Trial content (FreeTrialLessonFile)
+    if (!$isAllowed) {
+        $cleanPath = preg_replace('/^storage\//', '', $path);
+        $isAllowed = FreeTrialLessonFile::where('file_path', $path)
+            ->orWhere('file_path', $cleanPath)
+            ->orWhere('file_path', 'storage/' . $cleanPath)
+            ->exists();
+    }
+
+    // 3. Check Bearer token auth if present
+    if (!$isAllowed) {
+        $user = auth('sanctum')->user();
+        if ($user) {
+            $cleanPath = preg_replace('/^storage\//', '', $path);
+            $lessonFile = LessonFile::with('lesson')
+                ->where('file_path', $path)
+                ->orWhere('file_path', $cleanPath)
+                ->orWhere('file_path', 'storage/' . $cleanPath)
+                ->first();
+            if ($lessonFile) {
+                $isAllowed = ContentAccessService::canAccessLessonFile($lessonFile, $user);
+            }
+        }
+    }
+
+    // Return 403 Forbidden on failure to avoid triggering Flutter AuthInterceptor _forceLogout()
+    if (!$isAllowed) {
+        return response()->json([
+            'message' => 'عفواً، يتطلب تحميل هذا الملف اشتراكاً سارياً أو توقيعاً معتمداً.',
+            'error' => 'forbidden',
+            'requires_subscription' => true,
+        ], 403);
+    }
 
     $mime = \Illuminate\Support\Facades\File::mimeType($fullPath);
     return response()->file($fullPath, [
@@ -101,8 +180,6 @@ Route::get('/free-trial/subjects/{id}/lesson-files', [FreeTrialController::class
 Route::get('/free-trial/lesson-files/{id}', [FreeTrialController::class, 'showLessonFile']);
 
 // ── Educational Hierarchy Navigation ───────────────────────────────────────
-// Stages, Grades, Sections, Subjects are accessible for catalog browsing, guest trial,
-// and enrolled students. (Unit/Lesson level handles dynamic lesson-level lock/preview).
 Route::get('/educational-stages', [EducationalStageController::class, 'index']);
 Route::get('/educational-stages/{id}', [EducationalStageController::class, 'show']);
 Route::get('/stages', [EducationalStageController::class, 'index']);
@@ -112,8 +189,13 @@ Route::get('/grades/{id}', [GradeController::class, 'show']);
 Route::get('/sections/{id}', [SectionController::class, 'show']);
 Route::get('/subjects/{id}', [SubjectController::class, 'show']);
 Route::get('/units/{id}', [UnitController::class, 'show']);
-Route::get('/lessons/{id}', [LessonController::class, 'show']);
-Route::get('/lesson-files/{id}', [LessonFileController::class, 'show']);
+
+// Protected content endpoints: verify subscription or preview access
+Route::middleware(CheckSubscription::class)->group(function () {
+    Route::get('/lessons/{id}', [LessonController::class, 'show']);
+    Route::get('/lesson-files/{id}', [LessonFileController::class, 'show']);
+});
+
 Route::get('/stages/{id}/file-thumbnails', [ThumbnailController::class, 'getStageDefaultThumbnails']);
 Route::get('/educational-stages/{id}/file-thumbnails', [ThumbnailController::class, 'getStageDefaultThumbnails']);
 
